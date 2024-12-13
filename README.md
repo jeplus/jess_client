@@ -1,6 +1,6 @@
-# ENSIMS JESS Web Client (jess_client.exe)
+# ENSIMS JESS Web Client
 
-Version: 1.0.0.0
+Version: 1.0.0
 Copyright: © 2024, Energy Simulation Solutions Ltd.
 
 ## Overview
