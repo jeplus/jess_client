@@ -8,12 +8,12 @@ using System.Threading;
 namespace ensims.jess_client.Classes {
 
     public class FolderMonitor {
-        public static bool MonitorOn { get; set; }
-        public bool Enabled { get; set; }
+        public static bool MonitorOn { get; set; } = true;
+        public bool Enabled { get; set; } = true;
         public string Path { get; set; }
-        public MonitorType Type { get; set; }
+        public MonitorType Type { get; set; } = MonitorType.MarkerFile;
         public DateTime LastCheckTime { get; set; }
-        public string MarkerFileName { get; set; }
+        public string MarkerFileName { get; set; } = "submit!";
         public HashSet<string> PreviousFiles { get; set; }
         public Dictionary<string, DateTime> PreviousSubfolders { get; set; }
     }
@@ -38,6 +38,103 @@ namespace ensims.jess_client.Classes {
                 Opt = opt;
                 TargetFolder = target;
             }
+        }
+
+        // Useful ??
+        public class JobSettings {
+            // EnergyPlus
+            //var formData = new Dictionary<string, string> {
+            //    { "type", "EP" },
+            //    { "title", "job title" },
+            //    { "desc", "some description" },
+            //    { "model", "model.idf" },
+            //    { "weather", "my_weather_file.epw" },
+            //    { "split", "true|false" }
+            //};
+
+            //JEPlus
+            //var formData = new Dictionary<string, string> {
+            //    { "type", "JEP" },
+            //    { "title", "job title" },
+            //    { "desc", "some description" },
+            //    { "model", "project.json" },
+            //    { "subset", "ALL|LHS|LIST_FILE|DEFAULT" },
+            //    { "cases", "sample size or list file name" }
+            //};
+
+            // rtrace
+            //var formData = new Dictionary<string, string> {
+            //    { "type", "RAD" },
+            //    { "title", "job title" },
+            //    { "desc", "some description" },
+            //    { "program", "rtrace" },
+            //    { "model", "my_model.oct" },
+            //    { "input", "view_def.vd" },
+            //    { "output", "output file extension" },
+            //    { "args", "...radiance args" }
+            //};
+
+            // rpict
+            //var formData = new Dictionary<string, string> {
+            //    { "type", "RAD" },
+            //    { "title", "job title" },
+            //    { "desc", "some description" },
+            //    { "program", "rpict" },
+            //    { "model", "my_model.oct" },
+            //    { "input", "view_def.vd" },
+            //    { "output", "output file extension" },
+            //    { "args", "...radiance args" }
+            //};
+
+            // daysim
+            //var formData = new Dictionary<string, string> {
+            //    { "type", "DS" },
+            //    { "title", "job title" },
+            //    { "desc", "some description" },
+            //    { "model", "my_header.hea" },
+            //    { "input", "sensors.in" }
+            //};
+
+            public string Type { get; set; }
+            public string Title { get; set; }
+            public string Desc { get; set; }
+            public string Model { get; set; }
+            public string Weather { get; set; }
+            public string Split { get; set; }
+            public string Subset { get; set; }
+            public string Cases { get; set; }
+            public string Program { get; set; }
+            public string Input { get; set; }
+            public string Output { get; set; }
+            public string Args { get; set; }
+
+            public JobSettings() {
+            }
+
+            public static JobSettings DefaultRTraceSettings () {
+                JobSettings js = new JobSettings {
+                    Type = "RAD",
+                    Model = "model.oct",
+                    Program = "rtrace",
+                    Input = "*.in",
+                    Output = "ill",
+                    Args = "-ab 5 -ad 2048 -aa .2 -ar 512 -as 1024 -h+ -I+ -oov -fa"
+                };
+                return js;
+            }
+
+            public static JobSettings DefaultRPictSettings() {
+                JobSettings js = new JobSettings {
+                    Type = "RAD",
+                    Model = "model.oct",
+                    Program = "rpict",
+                    Input = "*.vf",
+                    Output = "hdr",
+                    Args = "-S 1 -o sc%%03d.hdr -pa 1.0 -pj 0.9 -pd 0.0 -pm 0.0 -ps 1  -pt 0.05 -w+ -i- -bv+ -dt 0.050 -dc 0.50 -dj 0.7 -ds 0.150 -dr 3 -dp 512 -dv+ -st 0.150 -ab 4 -ar 256 -ad 1024 -as 512 -aa 0.15 -av 0.0 0.0 0.0 -aw 0 -lw 0.002 -ss 1.0 -lr -10 -u- -x 1600 -y 1600 -t 60"
+                };
+                return js;
+            }
+
         }
 
         public string Comment { get; set; } = string.Empty;
@@ -97,8 +194,14 @@ namespace ensims.jess_client.Classes {
             return false;
         }
 
-        public void AddFolderMonitor(FolderMonitor monitor) {
+        public int AddFolderMonitor(FolderMonitor monitor) {
+            int idx = WatchedFolders.FindIndex(item => item.Path == monitor.Path);
+            if (idx >= 0) {
+                return idx;
+            }
+
             WatchedFolders.Add(monitor);
+            return WatchedFolders.Count - 1;
         }
 
         public void RemoveFolderMonitor(FolderMonitor monitor) {

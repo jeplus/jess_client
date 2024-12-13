@@ -224,14 +224,39 @@ namespace ensims.jess_client {
                     }
 
                     try {
-                        log.Debug($"Received args: [{string.Join(", ", args)}]");
+                        List<string> selectedItems = new List<string>();
 
-                        // Get selected items from the explorer windows
-                        // List<string> selectedItems = GetSelectedItemsFromExplorer ();
-
-                        // The selected paths are already passed in args[1] onwards
-                        List<string> selectedItems = args.Skip(1).ToList();
-
+                        // Get the active Explorer window handle
+                        int handle = GetForegroundWindow();
+                        log.Debug($"Active window handle: {handle}");
+                        
+                        // Get Shell application
+                        Shell32.Shell shell = new Shell32.Shell();
+                        
+                        // Get the shell windows
+                        ShellWindows shellWindows = new ShellWindows();
+                        
+                        // Iterate through windows to find Explorer
+                        foreach (InternetExplorer window in shellWindows) {
+                            log.Debug($"Found window: HWND={window.HWND}, Name={window.FullName}");
+                            try {
+                                if (window.HWND == handle) {
+                                    // Get the shell window interface
+                                    Shell32.IShellFolderViewDual2 shellWindow = window.Document as Shell32.IShellFolderViewDual2;
+                                    if (shellWindow != null) {
+                                        // Get selected items
+                                        FolderItems items = shellWindow.SelectedItems();
+                                        foreach (FolderItem item in items) {
+                                            selectedItems.Add(item.Path);
+                                        }
+                                        break;
+                                    }
+                                }
+                            } catch (Exception ex) {
+                                log.Debug($"Error processing window: {ex.Message}");
+                                continue;
+                            }
+                        }
 
                         if (selectedItems.Count == 0) {
                             log.Warn("No items were selected from Explorer");
@@ -672,62 +697,6 @@ namespace ensims.jess_client {
                 Console.WriteLine("JESS_Web Client v1.0.0 (C) 2024 Energy Simulation Solutions Ltd. All rights reserved. ");
             }
             return _exitCode;
-        }
-
-        private static List<string> GetSelectedItemsFromExplorer () {
-            List<string> selectedItems = new List<string>();
-
-            // Get the active Explorer window handle
-            int handle = GetForegroundWindow();
-            log.Debug($"Active window handle: {handle}");
-            
-            // Get the shell windows
-            ShellWindows shellWindows = new ShellWindows();
-            
-            // Iterate through windows to find Explorer
-            foreach (InternetExplorer window in shellWindows) {
-                log.Debug($"Found window: HWND={window.HWND}, Name={window.FullName}");
-                try {
-                    // Check if this is an Explorer window
-                    string filename = Path.GetFileNameWithoutExtension(window.FullName).ToLower();
-                    if (filename.Equals("explorer")) {
-                        // Get the shell window interface
-                        Shell32.IShellFolderViewDual2 shellWindow = window.Document as Shell32.IShellFolderViewDual2;
-                        if (shellWindow != null) {
-                            try {
-                                // Get the current folder path
-                                var folder = shellWindow.Folder;
-                                string folderPath = folder.Title;  // This gets the current folder path
-                                log.Debug($"Checking Explorer window for folder: {folderPath}");
-                                
-                                // Get selected items
-                                FolderItems items = shellWindow.SelectedItems();
-                                if (items != null && items.Count > 0) {
-                                    // Verify at least one selected item is in this folder
-                                    foreach (FolderItem item in items) {
-                                        string itemPath = item.Path;
-                                        string itemFolder = Path.GetDirectoryName(itemPath);
-                                        log.Debug($"Checking item: {itemPath} in folder: {itemFolder}");
-                                        selectedItems.Add(itemPath);
-                                    }
-                                    // If we found items in this folder, this is the right window
-                                    if (selectedItems.Count > 0) {
-                                        log.Debug($"Found correct Explorer window with {selectedItems.Count} selected items");
-                                        break;
-                                    }
-                                }
-                            } catch (Exception ex) {
-                                log.Debug($"Error checking folder contents: {ex.Message}");
-                            }
-                        }
-                    }
-                } catch (Exception ex) {
-                    log.Debug($"Error processing window: {ex.Message}");
-                    continue;
-                }
-            }
-
-            return selectedItems;
         }
 
         public static bool IsFileWriteable(string filePath) {

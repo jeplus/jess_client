@@ -9,6 +9,7 @@ using log4net;
 using ensims.jess_client.Classes;
 using System.Threading;
 using jess_client.Forms;
+using ensims.jess_client.Forms;
 
 namespace ensims.jess_client {
 
@@ -81,9 +82,9 @@ namespace ensims.jess_client {
                 log.Debug("Config change detected.");
                 GlobalUtility.Config = ClientConfig.ParseClientConfig(GlobalUtility.ConfigFilepath);
                 LastConfigTime = DateTime.Now;
-                if (mainForm != null) {
-                    mainForm.LoadFolderList();
-                }
+                //if (mainForm != null) {
+                //    mainForm.LoadFolderList();
+                //}
             }
         }
 
@@ -169,20 +170,20 @@ namespace ensims.jess_client {
             var newSubfolders = currentSubfolders.Keys.Except(previousSubfolders.Keys);
             foreach (string newSubfolder in newSubfolders) {
                 log.Info($"New subfolder in {Path.GetFileName(monitor.Path)}: {Path.GetFileName(newSubfolder)}");
-                MainModule.StartUploadtoJESS(new List<string> { newSubfolder }, "Folder watch");
+                StartUploadtoJESS(new List<string> { newSubfolder }, "Folder watch", Path.Combine(monitor.Path, newSubfolder, "output"));
                 //ShowNotification($"New subfolder in {Path.GetFileName(monitor.Path)}: {Path.GetFileName(newSubfolder)}");
                 hasMods = true;
             }
 
             // Check for modified subfolders
-            foreach (string subfolder in currentSubfolders.Keys.Intersect(previousSubfolders.Keys)) {
-                if (currentSubfolders [subfolder] > previousSubfolders [subfolder]) {
-                    log.Info($"Subfolder modified in {Path.GetFileName(monitor.Path)}: {Path.GetFileName(subfolder)}");
-                    MainModule.StartUploadtoJESS(new List<string> { subfolder }, "Folder watch");
-                    //ShowNotification($"Subfolder modified in {Path.GetFileName(monitor.Path)}: {Path.GetFileName(subfolder)}");
-                    hasMods = true;
-                }
-            }
+            //foreach (string subfolder in currentSubfolders.Keys.Intersect(previousSubfolders.Keys)) {
+            //    if (currentSubfolders [subfolder] > previousSubfolders [subfolder]) {
+            //        log.Info($"Subfolder modified in {Path.GetFileName(monitor.Path)}: {Path.GetFileName(subfolder)}");
+            //        StartUploadtoJESS(new List<string> { subfolder }, "Folder watch", "output");
+            //        //ShowNotification($"Subfolder modified in {Path.GetFileName(monitor.Path)}: {Path.GetFileName(subfolder)}");
+            //        hasMods = true;
+            //    }
+            //}
 
             // Update the monitor's state
             monitor.LastCheckTime = DateTime.Now;
@@ -200,12 +201,12 @@ namespace ensims.jess_client {
             var markerFilePath = Path.Combine(monitor.Path, monitor.MarkerFileName);
             if (File.Exists(markerFilePath)) {
                 var fileInfo = new FileInfo(markerFilePath);
-                if (fileInfo.LastWriteTime > monitor.LastCheckTime) {
+                // if (fileInfo.LastWriteTime > monitor.LastCheckTime) {
                     log.Info($"Marker file found in {Path.GetFileName(monitor.Path)}");
                     File.Delete(markerFilePath); // Optionally delete the marker file after processing
-                    MainModule.StartUploadtoJESS(new List<string> { monitor.Path }, "Folder watch");
+                    StartUploadtoJESS(new List<string> { monitor.Path }, "Folder watch", monitor.Path + ".output");
                     hasMods = true;
-                }
+                // }
             }
 
             monitor.LastCheckTime = DateTime.Now;
@@ -213,9 +214,9 @@ namespace ensims.jess_client {
         }
 
         private void ShowNotification(string message) {
-            trayIcon.BalloonTipTitle = "Folder Monitor Alert";
-            trayIcon.BalloonTipText = message;
-            trayIcon.ShowBalloonTip(3000);
+            //trayIcon.BalloonTipTitle = "Folder Monitor Alert";
+            //trayIcon.BalloonTipText = message;
+            trayIcon.ShowBalloonTip(15000, "JESS Client", message, ToolTipIcon.Info);
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e) {
@@ -247,6 +248,86 @@ namespace ensims.jess_client {
             singleton.ReleaseMutex();
             Application.Exit();
         }
+
+        /// <summary>
+        /// If files/folder to be uploaded count greater than 0 then start the upload process.
+        /// </summary>
+        private void StartUploadtoJESS(List<string> items, string caption, string resultdir) {
+
+            log.Debug($"Uploading job ({caption}) with files: {String.Join(", ", items)}");
+
+            // First, check in
+            if (!JESSProcess.CheckInTransaction()) {
+                if (!GlobalUtility.LogonDialogShown) {
+                    frmLogin frm = new frmLogin();
+                    frm.ShowDialog();
+                    if (frm != null) { frm.Dispose(); frm = null; }
+                }
+            } else {
+                log.Info("Check-in successful. Session key has been updated.");
+            }
+
+            if (GlobalUtility.LoggedOn) {
+                // Check upload size
+                long totalSize = DirectorySizeCalculator.GetTotalSize(items);
+                log.Debug($"Upload size is {DirectorySizeCalculator.FormatSize(totalSize)}");
+                if (totalSize > 200 * 1000 * 1000) {
+                    log.Warn($"Folder {items [0]} ({DirectorySizeCalculator.FormatSize(totalSize)}) is too large to upload.");
+                    return;
+                }
+
+                //if (items.Count == 1 && Directory.Exists(items [0])) {
+                //    var size = GlobalUtility.CalcFolderSize(items [0]);
+                //    if (size > 200) {
+                //        log.Warn($"Folder {items [0]} ({size}MB) is too large to upload.");
+                //        return;
+                //    }
+                //}
+
+                // Start submitting
+                var formData = new Dictionary<string, string> {
+                                    { "title", caption },
+                                    { "desc", String.Join(" ", items) }
+                                };
+                // Prepare files to upload
+                if (items != null && items.Count() > 0) {
+
+                    List<FileInfo> files = new List<FileInfo> { };
+                    if (items.Count() == 1 && Path.GetExtension(items.First()).Equals(".zip")) {
+                        files.Add(new FileInfo(@items.First()));
+                    } else {
+                        string zipfile = Path.Combine(MainModule.AppDataStorage.GetAppDataPath(), "tosubmit.zip");
+                        zipfile = GlobalUtility.CreateZipArchive(zipfile, items.ToList());
+                        files.Add(new FileInfo(@zipfile));
+                    }
+
+                    // Upload and run
+                    var result = JESSProcess.SubmitTransaction(files, formData);
+
+                    if (result != null && result.Ok) {
+                        ShowNotification($"Job submitted with id {result.Data}.");
+                        //if (File.Exists(zipfile)) {
+                        //    File.Delete(zipfile);
+                        //}
+
+                        // Save pending job record to config file
+                        // string outdir = Path.GetFullPath(String.Join("-", items) + ".output");
+                        string outdir = Path.GetFullPath(resultdir);
+                        ClientConfig.PendingJobRecord job = new ClientConfig.PendingJobRecord(result.Data, null, outdir);
+                        GlobalUtility.Config.PendingJobs.Add(job.Id.ToString(), job);
+                        GlobalUtility.Config.PersistClientConfig(GlobalUtility.ConfigFilepath);
+
+                        log.Info($"Submission successful. Job {job.Id.ToString()} has been added to the pending jobs list.");
+                    } else {
+                        MessageBox.Show($"Job submission failed: {result.Status}", "Message", MessageBoxButtons.OK);
+                    }
+                }
+            } else {
+                log.Info("Please log on first.");
+            }
+        }
+
+
     }
 
 }

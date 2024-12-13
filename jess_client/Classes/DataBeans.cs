@@ -1,4 +1,6 @@
-﻿namespace ensims.jess_client.Classes {
+﻿using Newtonsoft.Json;
+
+namespace ensims.jess_client.Classes {
 
     public class BeanResponse {
         public bool Ok { get; set; }
@@ -32,7 +34,8 @@
         public long Job_ID { get; set; }
         public string Status { get; set; }
         public string Status_Info { get; set; }
-        public long Completion_Time { get; set; }
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public long Completion_Time { get; set; } = 0;
         public bool Cancel_Flag { get; set; }
         public long Last_Update { get; set; }
         public string Progress { get; set; }

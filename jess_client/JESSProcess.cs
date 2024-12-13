@@ -81,14 +81,14 @@ namespace ensims.jess_client {
         public static BeanDataResponse<long> SubmitTransaction(IEnumerable<FileInfo> files, Dictionary<string, string> formData) {
             BeanDataResponse<long> resp = null;
             Uri uriJESSServer = new Uri(GlobalUtility.Config.JessBaseUrl() + "/job", UriKind.Absolute);
-            try {
+            //try {
                 // GlobalUtility.JessClient.setSessionKey(GlobalUtility.Config.SessionKey);
                 resp = GlobalUtility.JessClient.UploadFiles<BeanDataResponse<long>>(GlobalUtility.Config.JessBaseUrl() + "/job", files, formData);
-            } catch (Exception ex) {
-                log.Error("Submission failed: " + ex.Message);
-                //MessageBox.Show(ex.Message, "Message", MessageBoxButtons.OK);
-            } finally {
-            }
+            //} catch (Exception ex) {
+            //    log.Error("Submission failed: " + ex.Message);
+            //    //MessageBox.Show(ex.Message, "Message", MessageBoxButtons.OK);
+            //} finally {
+            //}
             return resp;
         }
 
@@ -98,15 +98,15 @@ namespace ensims.jess_client {
         /// <returns></returns>
         public static BeanJobStatus JobStatusTransaction(string job_id) {
             BeanJobStatus resp = null;
-            try {
+            //try {
                 var res = GlobalUtility.JessClient.Get<BeanDataResponse<BeanJobStatus>>(GlobalUtility.Config.JessBaseUrl() + "/job/status/" + job_id);
                 if (res.Ok) {
                     resp = res.Data;
                 }
-            } catch (Exception ex) {
-                log.Error(ex.ToString());
-            } finally {
-            }
+            //} catch (Exception ex) {
+            //    log.Error(ex.ToString());
+            //} finally {
+            //}
             return resp;
         }
 
@@ -116,13 +116,13 @@ namespace ensims.jess_client {
         /// <returns></returns>
         public static bool JobCancelTransaction(string job_id) {
             bool retflag = false;
-            try {
+            //try {
                 var res = GlobalUtility.JessClient.Post<BeanDataResponse<BeanJobStatus>>(GlobalUtility.Config.JessBaseUrl() + "/job/" + job_id, new BeanJobCancelCmd());
                 retflag = res.Ok;
-            } catch (Exception ex) {
-                log.Error(ex.ToString());
-            } finally {
-            }
+            //} catch (Exception ex) {
+            //    log.Error(ex.ToString());
+            //} finally {
+            //}
             return retflag;
         }
 
@@ -132,7 +132,7 @@ namespace ensims.jess_client {
         /// unpacked into the given output folder.
         /// </summary>
         /// <returns></returns>
-        public static bool JobRetrievalTransaction(string job_id, string opt, string extractPath) {
+        public static bool JobRetrievalTransaction(string job_id, string opt, string extractPath, bool clearFolder) {
             Boolean retflag = false;
 
             var args = String.IsNullOrEmpty(opt) ? "" : "?ext=" + opt;
@@ -141,7 +141,7 @@ namespace ensims.jess_client {
             // Ensure the extract path exists
             if (! Directory.Exists(folder)) {
                 Directory.CreateDirectory(folder);
-            }else {
+            }else if (clearFolder) {
                 // Empty output folder
                 System.IO.DirectoryInfo di = new DirectoryInfo(folder);
                 foreach (FileInfo file in di.GetFiles()) {
@@ -153,18 +153,19 @@ namespace ensims.jess_client {
             }
 
             string tempZip = null;
-            try {
+            //try {
                 tempZip = GlobalUtility.JessClient.DownloadFile(GlobalUtility.Config.JessBaseUrl() + "/job/file/" + job_id + args, Path.GetTempPath());
-                ZipFile.ExtractToDirectory(tempZip, folder);
+                // ZipFile.ExtractToDirectory(tempZip, folder);
+                ExtractZipFileWithOverwrite(tempZip, folder);
                 retflag = true;
-            } catch (Exception ex) {
-                log.Error(ex.ToString());
-            } finally {
                 // Clean up the temporary zip file
                 if (File.Exists(tempZip)) {
                     File.Delete(tempZip);
                 }
-            }
+            //} catch (Exception ex) {
+            //    log.Error(ex.ToString());
+            //} finally {
+            //}
             return retflag;
         }
 
@@ -190,7 +191,7 @@ namespace ensims.jess_client {
         /// Retrieve jobs in the list
         /// </summary>
         /// <returns></returns>
-        public static bool CheckAndRetrieveJobs(string job) {
+        public static bool CheckAndRetrieveJobs(string job, string opt=null, string target=null) {
             Boolean retflag = true;
             bool listChanged = false;
             List<string> retrieved = new List<string> ();
@@ -207,8 +208,10 @@ namespace ensims.jess_client {
                 ClientConfig.PendingJobRecord rec = null;
                 if (GlobalUtility.Config.PendingJobs.ContainsKey(job)) {
                     rec = GlobalUtility.Config.PendingJobs [job];
+                    rec.Opt = opt;
+                    rec.TargetFolder = Path.GetFullPath(target);
                 }else if (long.TryParse(job, out long job_id)) {
-                    rec = new ClientConfig.PendingJobRecord(job_id, null, null);
+                    rec = new ClientConfig.PendingJobRecord(job_id, opt, target);
                 }else {
                     log.Error($"Job ID {job} must be a number");
                     return false;
@@ -233,13 +236,15 @@ namespace ensims.jess_client {
             var status = JobStatusTransaction(job_id);
             if (status != null) {
                 if (status.Status.Equals("FINISHED")) {
-                    if (JobRetrievalTransaction(job_id, rec.Opt, rec.TargetFolder)) {
+                    if (JobRetrievalTransaction(job_id, rec.Opt, rec.TargetFolder, false)) {
                         log.Info(job_id + ": results downloaded to " + (String.IsNullOrEmpty(rec.TargetFolder) ? "the current folder" : rec.TargetFolder));
                     } else {
                         // download error
                         log.Error(job_id + ": error occured when downloading results.");
                         retflag = false;
                     }
+                } else if (status.Status.Equals("CANCELED") || status.Status.Equals("REJECTED")) {
+                    log.Info($"{job_id} is {status.Status}. Result is not downloaded.");
                 } else {
                     log.Info(job_id + " is " + status.Status + ": " + status.Status_Info);
                     retflag = false;
@@ -287,6 +292,39 @@ namespace ensims.jess_client {
                     // StopAutoRetrievalTimer();
                 }
                 mut.ReleaseMutex();
+            }
+        }
+
+        public static void ExtractZipFileWithOverwrite(string zipPath, string extractPath) {
+            // Ensure extract directory exists
+            Directory.CreateDirectory(extractPath);
+
+            // Using .NET Framework 4.8 approach
+            using (ZipArchive archive = ZipFile.OpenRead(zipPath)) {
+                foreach (ZipArchiveEntry entry in archive.Entries) {
+                    // Construct full destination path
+                    string destinationPath = Path.GetFullPath(Path.Combine(extractPath, entry.FullName));
+
+                    // Ensure the directory for the file exists
+                    string destinationDirectory = Path.GetDirectoryName(destinationPath);
+                    Directory.CreateDirectory(destinationDirectory);
+
+                    // Handle file extraction with overwrite
+                    if (!string.IsNullOrEmpty(entry.Name)) {
+                        try {
+                            // Delete existing file if it exists
+                            if (File.Exists(destinationPath)) {
+                                File.Delete(destinationPath);
+                            }
+
+                            // Extract the file
+                            entry.ExtractToFile(destinationPath, overwrite: true);
+                        } catch (Exception ex) {
+                            // Optional: Log or handle extraction errors
+                            log.Error($"Error extracting {entry.FullName}: {ex.Message}");
+                        }
+                    }
+                }
             }
         }
 

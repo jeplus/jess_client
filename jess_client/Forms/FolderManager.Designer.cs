@@ -23,6 +23,7 @@
         /// the contents of this method with the code editor.
         /// </summary>
         private void InitializeComponent() {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FolderManager));
             this.label1 = new System.Windows.Forms.Label();
             this.chkOnOff = new System.Windows.Forms.CheckBox();
@@ -40,13 +41,22 @@
             this.typeComboBox = new System.Windows.Forms.ComboBox();
             this.folderListBox = new System.Windows.Forms.ListBox();
             this.saveButton = new System.Windows.Forms.Button();
+            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.folderMonitorBindingSource = new System.Windows.Forms.BindingSource(this.components);
             this.panel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
+            this.splitContainer1.Panel1.SuspendLayout();
+            this.splitContainer1.Panel2.SuspendLayout();
+            this.splitContainer1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.folderMonitorBindingSource)).BeginInit();
             this.SuspendLayout();
             // 
             // label1
             // 
+            this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(499, 19);
+            this.label1.Location = new System.Drawing.Point(543, 19);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(55, 17);
             this.label1.TabIndex = 3;
@@ -54,11 +64,12 @@
             // 
             // chkOnOff
             // 
+            this.chkOnOff.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.chkOnOff.Appearance = System.Windows.Forms.Appearance.Button;
             this.chkOnOff.Checked = true;
             this.chkOnOff.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkOnOff.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.chkOnOff.Location = new System.Drawing.Point(560, 12);
+            this.chkOnOff.Location = new System.Drawing.Point(601, 12);
             this.chkOnOff.Name = "chkOnOff";
             this.chkOnOff.Size = new System.Drawing.Size(138, 30);
             this.chkOnOff.TabIndex = 2;
@@ -70,15 +81,16 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(12, 46);
+            this.label4.Location = new System.Drawing.Point(15, 19);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(122, 17);
+            this.label4.Size = new System.Drawing.Size(114, 17);
             this.label4.TabIndex = 5;
-            this.label4.Text = "Folders to monitor";
+            this.label4.Text = "Selected Folders";
             // 
             // addButton
             // 
-            this.addButton.Location = new System.Drawing.Point(15, 364);
+            this.addButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.addButton.Location = new System.Drawing.Point(12, 377);
             this.addButton.Name = "addButton";
             this.addButton.Size = new System.Drawing.Size(97, 30);
             this.addButton.TabIndex = 7;
@@ -88,7 +100,8 @@
             // 
             // removeButton
             // 
-            this.removeButton.Location = new System.Drawing.Point(118, 364);
+            this.removeButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.removeButton.Location = new System.Drawing.Point(115, 377);
             this.removeButton.Name = "removeButton";
             this.removeButton.Size = new System.Drawing.Size(104, 30);
             this.removeButton.TabIndex = 8;
@@ -98,6 +111,9 @@
             // 
             // panel1
             // 
+            this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.panel1.Controls.Add(this.browseButton);
             this.panel1.Controls.Add(this.enabledCheckBox);
@@ -107,18 +123,19 @@
             this.panel1.Controls.Add(this.markerFileTextBox);
             this.panel1.Controls.Add(this.label5);
             this.panel1.Controls.Add(this.typeComboBox);
-            this.panel1.Location = new System.Drawing.Point(364, 66);
+            this.panel1.Location = new System.Drawing.Point(5, 7);
             this.panel1.Margin = new System.Windows.Forms.Padding(5, 3, 3, 3);
             this.panel1.Name = "panel1";
             this.panel1.Padding = new System.Windows.Forms.Padding(5);
-            this.panel1.Size = new System.Drawing.Size(334, 292);
+            this.panel1.Size = new System.Drawing.Size(326, 307);
             this.panel1.TabIndex = 17;
             // 
             // browseButton
             // 
+            this.browseButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.browseButton.AutoSize = true;
             this.browseButton.Image = global::ensims.jess_client.Properties.Resources.FolderOpen_16x;
-            this.browseButton.Location = new System.Drawing.Point(291, 80);
+            this.browseButton.Location = new System.Drawing.Point(281, 80);
             this.browseButton.Name = "browseButton";
             this.browseButton.Size = new System.Drawing.Size(35, 30);
             this.browseButton.TabIndex = 14;
@@ -149,9 +166,11 @@
             // 
             // pathTextBox
             // 
+            this.pathTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.pathTextBox.Location = new System.Drawing.Point(20, 84);
             this.pathTextBox.Name = "pathTextBox";
-            this.pathTextBox.Size = new System.Drawing.Size(265, 22);
+            this.pathTextBox.Size = new System.Drawing.Size(255, 22);
             this.pathTextBox.TabIndex = 5;
             this.pathTextBox.TextChanged += new System.EventHandler(this.pathTextBox_TextChanged);
             // 
@@ -196,18 +215,22 @@
             // 
             // folderListBox
             // 
+            this.folderListBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.folderListBox.FormattingEnabled = true;
             this.folderListBox.ItemHeight = 16;
-            this.folderListBox.Location = new System.Drawing.Point(15, 66);
+            this.folderListBox.Location = new System.Drawing.Point(6, 7);
             this.folderListBox.Name = "folderListBox";
-            this.folderListBox.Size = new System.Drawing.Size(341, 292);
+            this.folderListBox.Size = new System.Drawing.Size(370, 308);
             this.folderListBox.TabIndex = 18;
             this.folderListBox.SelectedIndexChanged += new System.EventHandler(this.folderListBox_SelectedIndexChanged);
             // 
             // saveButton
             // 
+            this.saveButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.saveButton.DialogResult = System.Windows.Forms.DialogResult.OK;
-            this.saveButton.Location = new System.Drawing.Point(560, 394);
+            this.saveButton.Location = new System.Drawing.Point(597, 377);
             this.saveButton.Name = "saveButton";
             this.saveButton.Size = new System.Drawing.Size(138, 30);
             this.saveButton.TabIndex = 19;
@@ -215,18 +238,40 @@
             this.saveButton.UseVisualStyleBackColor = true;
             this.saveButton.Click += new System.EventHandler(this.saveButton_Click);
             // 
+            // splitContainer1
+            // 
+            this.splitContainer1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.splitContainer1.Location = new System.Drawing.Point(12, 48);
+            this.splitContainer1.Name = "splitContainer1";
+            // 
+            // splitContainer1.Panel1
+            // 
+            this.splitContainer1.Panel1.Controls.Add(this.folderListBox);
+            // 
+            // splitContainer1.Panel2
+            // 
+            this.splitContainer1.Panel2.Controls.Add(this.panel1);
+            this.splitContainer1.Size = new System.Drawing.Size(727, 323);
+            this.splitContainer1.SplitterDistance = 383;
+            this.splitContainer1.TabIndex = 20;
+            // 
+            // folderMonitorBindingSource
+            // 
+            this.folderMonitorBindingSource.DataSource = typeof(ensims.jess_client.Classes.FolderMonitor);
+            // 
             // FolderManager
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSize = true;
-            this.ClientSize = new System.Drawing.Size(710, 436);
+            this.ClientSize = new System.Drawing.Size(751, 419);
+            this.Controls.Add(this.splitContainer1);
+            this.Controls.Add(this.label4);
             this.Controls.Add(this.saveButton);
-            this.Controls.Add(this.folderListBox);
-            this.Controls.Add(this.panel1);
             this.Controls.Add(this.removeButton);
             this.Controls.Add(this.addButton);
-            this.Controls.Add(this.label4);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.chkOnOff);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -235,6 +280,11 @@
             this.Text = "JESS Client - Manage Watched Folders";
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
+            this.splitContainer1.Panel1.ResumeLayout(false);
+            this.splitContainer1.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
+            this.splitContainer1.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.folderMonitorBindingSource)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -258,5 +308,7 @@
         private System.Windows.Forms.ComboBox typeComboBox;
         private System.Windows.Forms.ListBox folderListBox;
         private System.Windows.Forms.Button saveButton;
+        private System.Windows.Forms.BindingSource folderMonitorBindingSource;
+        private System.Windows.Forms.SplitContainer splitContainer1;
     }
 }

@@ -9,6 +9,20 @@ using log4net;
 
 namespace ensims.jess_client.Classes {
 
+    public class CustomHttpRequestException : HttpRequestException {
+        public HttpStatusCode StatusCode { get; }
+
+        public CustomHttpRequestException(string message, HttpStatusCode statusCode)
+            : base(message) {
+            StatusCode = statusCode;
+        }
+
+        public CustomHttpRequestException(string message, HttpStatusCode statusCode, Exception inner)
+            : base(message, inner) {
+            StatusCode = statusCode;
+        }
+    }
+
     public class JessHttpClient {
 
         private static readonly ILog log = LogManager.GetLogger(typeof(JessHttpClient));
@@ -51,15 +65,26 @@ namespace ensims.jess_client.Classes {
             }
 
             // Ensure successful status code
-            response.EnsureSuccessStatusCode();
+            // response.EnsureSuccessStatusCode();
 
             return response;
         }
 
         public T SendRequest<T>(HttpRequestMessage request) {
             var response = SendRequestSync(request);
-            string content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            return JsonConvert.DeserializeObject<T>(content);
+
+            // Handle response status
+            if (response.IsSuccessStatusCode) {
+                // success
+                string content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                return JsonConvert.DeserializeObject<T>(content);
+            }
+
+            // Handle failure - Throw exception with detailed error information
+            throw new CustomHttpRequestException(
+                $"Request failed with status code {response.StatusCode}. " +
+                $"Reason: {response.ReasonPhrase}",
+                response.StatusCode);
         }
 
         public T Get<T>(string url) {
@@ -95,11 +120,19 @@ namespace ensims.jess_client.Classes {
             }
 
             // Ensure successful status code
-            response.EnsureSuccessStatusCode();
+            // response.EnsureSuccessStatusCode();
+            // Handle response status
+            if (response.IsSuccessStatusCode) {
+                // Read and deserialize the response content
+                string content = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<T>(content);
+            }
 
-            // Read and deserialize the response content
-            string content = await response.Content.ReadAsStringAsync();
-            return JsonConvert.DeserializeObject<T>(content);
+            // Handle failure - Throw exception with detailed error information
+            throw new CustomHttpRequestException(
+                $"Request failed with status code {response.StatusCode}. " +
+                $"Reason: {response.ReasonPhrase}",
+                response.StatusCode);
         }
 
         public async Task<T> GetAsync<T>(string url) {
@@ -149,16 +182,23 @@ namespace ensims.jess_client.Classes {
             }
 
             var response = await _httpClient.GetAsync(url);
-            response.EnsureSuccessStatusCode();
+            // response.EnsureSuccessStatusCode();
+            if (response.IsSuccessStatusCode) {
+                string fileName = GetFileNameFromResponse(response);
+                string filePath = Path.Combine(folderPath, fileName);
 
-            string fileName = GetFileNameFromResponse(response);
-            string filePath = Path.Combine(folderPath, fileName);
+                using (var fs = new FileStream(filePath, FileMode.CreateNew)) {
+                    await response.Content.CopyToAsync(fs);
+                }
 
-            using (var fs = new FileStream(filePath, FileMode.CreateNew)) {
-                await response.Content.CopyToAsync(fs);
+                return filePath;
             }
 
-            return filePath;
+            // Handle failure - Throw exception with detailed error information
+            throw new CustomHttpRequestException(
+                $"Request failed with status code {response.StatusCode}. " +
+                $"Reason: {response.ReasonPhrase}",
+                response.StatusCode);
         }
 
         public string DownloadFile(string url, string folderPath) {

@@ -14,53 +14,78 @@ using System.Windows.Forms;
 namespace jess_client.Forms {
 
     public partial class FolderManager : Form {
-        // private TrayIconApplicationContext appContext;
         private FolderMonitor selectedMonitor;
+        private BindingList<FolderMonitor> bindingList;
+        private BindingSource bindingSource;
 
         public FolderManager() {
             InitializeComponent();
-            LoadFolderList();
+            
+            bindingList = new BindingList<FolderMonitor>(GlobalUtility.Config.WatchedFolders.ToList());
+            bindingSource = new BindingSource();
+            bindingSource.DataSource = bindingList;
+            folderListBox.DataSource = bindingSource;
+            folderListBox.DisplayMember = "Path";
             updateEditorPanel();
             this.FormClosing += form_FormClosing;
         }
 
-        public void LoadFolderList() {
-            folderListBox.Items.Clear();
-            foreach (var monitor in GlobalUtility.Config.WatchedFolders) {
-                folderListBox.Items.Add($"{monitor.Path} ({monitor.Type})");
+        private void addButton_Click(object sender, EventArgs e) {
+            using (var fbd = new FolderBrowserDialog()) {
+                DialogResult result = fbd.ShowDialog();
+
+                if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(fbd.SelectedPath)) {
+                    string folderName = fbd.SelectedPath;
+                    
+                    // Check if the path already exists
+                    var existingMonitor = bindingList
+                        .FirstOrDefault(m => m.Path.Equals(folderName, StringComparison.OrdinalIgnoreCase));
+                        
+                    if (existingMonitor != null) {
+                        folderListBox.SelectedItem = existingMonitor;
+                        return;
+                    }
+
+                    FolderMonitor monitor = new FolderMonitor {
+                        Enabled = true,
+                        Path = folderName,
+                        Type = MonitorType.MarkerFile,
+                        MarkerFileName = "submit!",
+                        LastCheckTime = DateTime.Now
+                    };
+                    
+                    bindingList.Add(monitor);
+                    folderListBox.SelectedItem = monitor;
+                    
+                    // Sync with WatchedFolders
+                    GlobalUtility.Config.WatchedFolders.Clear();
+                    foreach (var item in bindingList) {
+                        GlobalUtility.Config.WatchedFolders.Add(item);
+                    }
+                }
             }
         }
 
-        private void addButton_Click(object sender, EventArgs e) {
-            FolderMonitor monitor = new FolderMonitor {
-                Enabled = true,
-                Path = "",
-                Type = MonitorType.Subfolders,
-                MarkerFileName = "",
-                LastCheckTime = DateTime.Now
-            };
-            GlobalUtility.Config.AddFolderMonitor(monitor);
-            LoadFolderList();
-            folderListBox.SelectedIndex = folderListBox.Items.Count - 1;
-        }
-
         private void removeButton_Click(object sender, EventArgs e) {
-            if (folderListBox.SelectedIndex != -1) {
-                var monitor = GlobalUtility.Config.WatchedFolders[folderListBox.SelectedIndex];
-                GlobalUtility.Config.RemoveFolderMonitor(monitor);
-                LoadFolderList();
-                folderListBox.SelectedIndex = -1;
+            if (folderListBox.SelectedItem != null) {
+                var monitor = (FolderMonitor)folderListBox.SelectedItem;
+                bindingList.Remove(monitor);
+                
+                // Sync with WatchedFolders
+                GlobalUtility.Config.WatchedFolders.Clear();
+                foreach (var item in bindingList) {
+                    GlobalUtility.Config.WatchedFolders.Add(item);
+                }
+                
+                // Clear selection and update UI
+                folderListBox.ClearSelected();
                 selectedMonitor = null;
                 updateEditorPanel();
             }
         }
 
         private void folderListBox_SelectedIndexChanged(object sender, EventArgs e) {
-            if (folderListBox.SelectedIndex != -1) {
-                selectedMonitor = GlobalUtility.Config.WatchedFolders [folderListBox.SelectedIndex];
-            }else {
-                selectedMonitor = null;
-            }
+            selectedMonitor = folderListBox.SelectedItem as FolderMonitor;
             updateEditorPanel();
         }
 
@@ -89,7 +114,6 @@ namespace jess_client.Forms {
         private void pathTextBox_TextChanged(object sender, EventArgs e) {
             if (selectedMonitor != null) {
                 selectedMonitor.Path = pathTextBox.Text;
-                LoadFolderList();
             }
         }
 
@@ -97,7 +121,6 @@ namespace jess_client.Forms {
             if (selectedMonitor != null) {
                 selectedMonitor.Type = (MonitorType)Enum.Parse(typeof(MonitorType), typeComboBox.SelectedItem.ToString());
                 markerFileTextBox.Enabled = typeComboBox.SelectedItem.ToString() == "MarkerFile";
-                LoadFolderList();
             }
         }
 
